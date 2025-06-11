@@ -1,0 +1,149 @@
+
+import numpy as np
+
+
+def hbv(
+        pcp: np.ndarray,
+        temp: np.ndarray,
+        evap: np.ndarray, 
+        parameters, 
+        initialize:bool = True,
+        init_days:int = None,
+        routing:bool = False,
+        )->np.ndarray: 
+
+    """
+    # Add initialization period to the model input time series
+    if meteo_data['P'].shape[0]<10*365.25:
+        repeats = np.ceil(10*365.25/meteo_data['P'].shape[0])
+        init_period = int(repeats*meteo_data['P'].shape[0])
+        meteo_data['P'] = kron(np.ones((repeats+1, 1)), meteo_data['P'])
+        meteo_data['ETpot'] = kron(np.ones((repeats+1, 1)), meteo_data['ETpot'])
+        meteo_data['Temp'] = kron(np.ones((repeats+1, 1)), meteo_data['Temp'])
+    else:
+        init_period = int(10*365.25)
+        meteo_data['P'] = np.concatenate([meteo_data['P'][:init_period], meteo_data['P']])
+        meteo_data['ETpot'] = np.concatenate([meteo_data['ETpot'][:init_period], meteo_data['ETpot']])
+        meteo_data['Temp'] = np.concatenate([meteo_data['Temp'][:init_period], meteo_data['Temp']])
+    
+    initialize : bool
+        whether to initialize the model by running it once with the whole input data or not
+    """
+
+    assert pcp.shape == temp.shape == evap.shape, \
+        "Input arrays must have the same shape"
+    
+    # Initialize time series of model variables
+    SNOWPACK = np.zeros(parameters['BETA'].shape,dtype=np.float32)+0.001
+    MELTWATER = np.zeros(parameters['BETA'].shape,dtype=np.float32)+0.001
+    SM = np.zeros(parameters['BETA'].shape,dtype=np.float32)+0.001
+    SUZ = np.zeros(parameters['BETA'].shape,dtype=np.float32)+0.001
+    SLZ = np.zeros(parameters['BETA'].shape,dtype=np.float32)+0.001
+    ETact = np.zeros(parameters['BETA'].shape,dtype=np.float32)+0.001
+    Qsim = np.full(pcp.shape, dtype=np.float32, fill_value=np.nan)
+    Qsim[0,:] = 0.001
+    
+    # Start loop
+
+    if initialize:
+        init_days = pcp.shape[0]-1
+    else:
+        init_days = 0
+    
+    time_step = 0
+    init_day_counter = 0
+    init_done = False
+
+    total_steps = 0
+
+    while time_step<pcp.shape[0]:
+        
+        # Separate precipitation into liquid and solid components
+        PRECIP = pcp[time_step,:]*parameters['PCORR']
+        RAIN = np.multiply(PRECIP, temp[time_step,:]>=parameters['TT'])
+        SNOW = np.multiply(PRECIP, temp[time_step,:]<parameters['TT'])
+        SNOW = SNOW*parameters['SFCF']
+        
+        # Snow
+        SNOWPACK = SNOWPACK+SNOW
+        melt = parameters['CFMAX']*(temp[time_step,:]-parameters['TT'])
+        melt = melt.clip(0,SNOWPACK)
+        MELTWATER = MELTWATER+melt
+        SNOWPACK = SNOWPACK-melt
+        refreezing = parameters['CFR']*parameters['CFMAX'] * (parameters['TT']- temp[time_step,:])
+        refreezing = refreezing.clip(0,MELTWATER)
+        SNOWPACK = SNOWPACK+refreezing
+        MELTWATER = MELTWATER-refreezing
+        tosoil = MELTWATER-(parameters['CWH']*SNOWPACK)
+        tosoil = tosoil.clip(0,None)
+        MELTWATER = MELTWATER-tosoil
+
+        # Soil and evaporation
+        soil_wetness = (SM/parameters['FC']) ** parameters['BETA']
+        soil_wetness = soil_wetness.clip(0,1.0)
+        recharge = (RAIN+tosoil) * soil_wetness
+        SM = SM+RAIN+tosoil-recharge
+        excess = SM-parameters['FC']
+        excess = excess.clip(0,None)
+        SM = SM-excess
+        evapfactor = SM/(parameters['LP']*parameters['FC'])
+        evapfactor = evapfactor.clip(0,1.0)
+        ETact = evap[time_step,:]*evapfactor
+        ETact = np.minimum(SM, ETact)
+        SM = SM-ETact
+
+        # Groundwater boxes
+        SUZ = SUZ+recharge+excess
+        PERC = np.minimum(SUZ, parameters['PERC'])
+        SUZ = SUZ-PERC
+        Q0 = parameters['K0']*np.maximum(SUZ-parameters['UZL'], 0.0)
+        SUZ = SUZ-Q0
+        Q1 = parameters['K1']*SUZ
+        SUZ = SUZ-Q1
+        SLZ = SLZ+PERC
+        Q2 = parameters['K2']*SLZ
+        SLZ = SLZ-Q2
+        Qsim[time_step,:] = Q0+Q1+Q2
+        
+        time_step = time_step+1
+        init_day_counter = init_day_counter+1
+
+        total_steps += 1
+                
+        # Go back to date_start once we've reached the initialization period
+        if (init_done==False) & (init_day_counter==init_days): 
+            time_step = 0
+            init_done = True
+
+    ## Check water balance closure
+    #storage_diff = SM[-1]-SM[0]+SUZ[-1]-SUZ[0]+SLZ[-1]-SLZ[0]+SNOWPACK[-1]-SNOWPACK[0]+MELTWATER[-1]-MELTWATER[0]
+    #error = np.mean(P*365.25) - np.mean(Qsim*365.25) - np.mean(ETact*365.25) - (365.25*storage_diff/len(P))
+    #if error > 1:
+    #    print "Warning: Water balance error of "+str(round(error*1000) / 1000)+" mm/yr"
+
+    if routing:
+        # Add routing delay to simulated runoff, uses MAXBAS parameter
+        parameters['MAXBAS'] = np.round(parameters['MAXBAS']*100) / 100
+        window = parameters['MAXBAS']*100
+        if int(window) < 0:
+            raise ValueError(f"MAXBAS parameter must be greater than 0 {parameters['MAXBAS']}")
+        
+        w = np.empty(int(window))
+        for x in range(0, int(window)):
+            w[x] = window/2 - abs(window/2-x-0.5)
+        w = np.concatenate([w, [0.0]*200])
+        w_small = [0.0]*int(np.ceil(parameters['MAXBAS'])) 
+    
+        #w_small = np.arange(2, 10, dtype=np.float)
+        for x in range(0, int(np.ceil(parameters['MAXBAS']))):
+            w_small[x] = np.sum(w[x*100:x*100+100])
+        w_small = w_small/np.sum(w_small)
+        Qsim_smoothed = np.full(Qsim.shape, fill_value=0.0)
+
+        for ii in range(len(w_small)):
+            Qsim_smoothed[ii:len(Qsim_smoothed)] = Qsim_smoothed[ii:len(Qsim_smoothed)] \
+                + Qsim[0:len(Qsim_smoothed)-ii]*w_small[ii]
+        
+        Qsim = Qsim_smoothed
+    
+    return Qsim

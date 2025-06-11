@@ -1,0 +1,9 @@
+/__pycache__
+/results
+/wandb
+/slurm_logs
+
+/.vscode
+*/__pycache__
+
+*.pyc
