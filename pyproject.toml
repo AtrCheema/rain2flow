@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "rain2flow"
 version = "0.1.0"
-description = "one stop shop for matplotlib plots"
-readme = "readme.md"
+description = "conceptual rainfall runoff models"
+readme = "README.md"
 requires-python = ">=3.5"
 license = { file = "LICENSE" }
 authors = [
@@ -33,13 +33,12 @@ classifiers = [
 ]
 
 dependencies = [
-    "numpy>=1.17, <2.3.0",
+    "numpy>=1.17, <2.4.0",
 ]
 
 [project.optional-dependencies]
 all = [
-    "numpy>=1.17, <2.3.0",
-    "pandas>=0.23.3, <2.3.0",
+    "numpy>=1.17, <2.4.0",
     "numba",
 ]
 

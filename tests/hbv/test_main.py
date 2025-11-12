@@ -43,7 +43,7 @@ class TestBasic(unittest.TestCase):
 
         out = hbv(pcp, evap, temp, {k: np.array(v) for k, v in params.items()})
 
-        assert out.shape == pcp.shape
+        assert out.shape == (len(pcp), )
 
         return
 

@@ -1,4 +1,8 @@
 
+from typing import Dict
+
+from ..utils import to_oneD_array
+
 import numpy as np
 
 
@@ -6,7 +10,7 @@ def hbv(
         pcp: np.ndarray,
         temp: np.ndarray,
         evap: np.ndarray, 
-        parameters, 
+        parameters:Dict[str, float], 
         initialize:bool = True,
         init_days:int = None,
         routing:bool = False,
@@ -32,16 +36,22 @@ def hbv(
 
     assert pcp.shape == temp.shape == evap.shape, \
         "Input arrays must have the same shape"
+    pcp = to_oneD_array(pcp, dtype=np.float32)
+    temp = to_oneD_array(temp, dtype=np.float32)
+    evap = to_oneD_array(evap, dtype=np.float32)
+
+    for k,v in parameters.items():
+        assert isinstance(v, (int, float)), f"Parameter {k} must be int or float"
     
     # Initialize time series of model variables
-    SNOWPACK = np.zeros(parameters['BETA'].shape,dtype=np.float32)+0.001
-    MELTWATER = np.zeros(parameters['BETA'].shape,dtype=np.float32)+0.001
-    SM = np.zeros(parameters['BETA'].shape,dtype=np.float32)+0.001
-    SUZ = np.zeros(parameters['BETA'].shape,dtype=np.float32)+0.001
-    SLZ = np.zeros(parameters['BETA'].shape,dtype=np.float32)+0.001
-    ETact = np.zeros(parameters['BETA'].shape,dtype=np.float32)+0.001
+    SNOWPACK = 0.001
+    MELTWATER = 0.001
+    SM = 0.001
+    SUZ = 0.001
+    SLZ = 0.001
+    ETact = 0.001
     Qsim = np.full(pcp.shape, dtype=np.float32, fill_value=np.nan)
-    Qsim[0,:] = 0.001
+    Qsim[:] = 0.001
     
     # Start loop
 
@@ -59,18 +69,18 @@ def hbv(
     while time_step<pcp.shape[0]:
         
         # Separate precipitation into liquid and solid components
-        PRECIP = pcp[time_step,:]*parameters['PCORR']
-        RAIN = np.multiply(PRECIP, temp[time_step,:]>=parameters['TT'])
-        SNOW = np.multiply(PRECIP, temp[time_step,:]<parameters['TT'])
+        PRECIP = pcp[time_step]*parameters['PCORR']
+        RAIN = np.multiply(PRECIP, temp[time_step]>=parameters['TT'])
+        SNOW = np.multiply(PRECIP, temp[time_step]<parameters['TT'])
         SNOW = SNOW*parameters['SFCF']
         
         # Snow
         SNOWPACK = SNOWPACK+SNOW
-        melt = parameters['CFMAX']*(temp[time_step,:]-parameters['TT'])
+        melt = parameters['CFMAX']*(temp[time_step]-parameters['TT'])
         melt = melt.clip(0,SNOWPACK)
         MELTWATER = MELTWATER+melt
         SNOWPACK = SNOWPACK-melt
-        refreezing = parameters['CFR']*parameters['CFMAX'] * (parameters['TT']- temp[time_step,:])
+        refreezing = parameters['CFR']*parameters['CFMAX'] * (parameters['TT']- temp[time_step])
         refreezing = refreezing.clip(0,MELTWATER)
         SNOWPACK = SNOWPACK+refreezing
         MELTWATER = MELTWATER-refreezing
@@ -80,15 +90,17 @@ def hbv(
 
         # Soil and evaporation
         soil_wetness = (SM/parameters['FC']) ** parameters['BETA']
-        soil_wetness = soil_wetness.clip(0,1.0)
+        # soil_wetness = soil_wetness.clip(0,1.0)
+        soil_wetness = max(0., min(soil_wetness, 1.0))
         recharge = (RAIN+tosoil) * soil_wetness
         SM = SM+RAIN+tosoil-recharge
         excess = SM-parameters['FC']
         excess = excess.clip(0,None)
         SM = SM-excess
         evapfactor = SM/(parameters['LP']*parameters['FC'])
-        evapfactor = evapfactor.clip(0,1.0)
-        ETact = evap[time_step,:]*evapfactor
+        # evapfactor = evapfactor.clip(0,1.0)
+        evapfactor = max(0., min(evapfactor, 1.0))
+        ETact = evap[time_step]*evapfactor
         ETact = np.minimum(SM, ETact)
         SM = SM-ETact
 
@@ -103,7 +115,7 @@ def hbv(
         SLZ = SLZ+PERC
         Q2 = parameters['K2']*SLZ
         SLZ = SLZ-Q2
-        Qsim[time_step,:] = Q0+Q1+Q2
+        Qsim[time_step] = Q0+Q1+Q2
         
         time_step = time_step+1
         init_day_counter = init_day_counter+1
