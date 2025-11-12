@@ -4,7 +4,7 @@ __all__ = ['hbv_nb']
 from typing import Dict
 
 try:
-    import numba as np
+    import numba as nb
 except (ImportError, ModuleNotFoundError):
     nb = None
 
