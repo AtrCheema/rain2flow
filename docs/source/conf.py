@@ -83,7 +83,7 @@ sphinx_gallery_conf = {
     'capture_repr': ('_repr_html_', '__repr__'),
     'matplotlib_animations': True,
     'image_srcset': ["2x"],
-    'only_warn_on_example_error': True,  
+    #'only_warn_on_example_error': True,  
 }
 
 # -- Options for HTML output -------------------------------------------------
@@ -91,15 +91,3 @@ sphinx_gallery_conf = {
 
 html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
-
-# List of arguments to be passed to the kernel that executes the notebooks:
-nbsphinx_execute_arguments = [
-    "--InlineBackend.figure_formats={'svg', 'pdf'}",
-]
-
-nbsphinx_allow_errors = True
-
-# nbsphinx_thumbnails = {
-#     'gallery/thumbnail-from-conf-py': 'gallery/a-local-file.png',
-#     'gallery/*-rst': 'images/notebook_icon.png',
-# }

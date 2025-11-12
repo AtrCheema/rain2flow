@@ -20,6 +20,9 @@ rain2flow
    :maxdepth: 2
    :caption: API
 
+.. autofunction:: rain2flow.hbv
+.. autofunction:: rain2flow._hbv.hbv_nb
+
 
 .. toctree::
    :maxdepth: 2

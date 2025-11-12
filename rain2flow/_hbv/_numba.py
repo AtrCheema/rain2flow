@@ -19,13 +19,19 @@ def hbv_nb(
         )->np.ndarray: 
 
     """
-    Same as hbv function above but compatible with numba!
+    Same as hbv function in :py:module:`rain2flow._hbv._main` but compatible with numba!
+
     parameters : dict
         a dictionary of 15 model parameters
     routing : bool
         whether to apply triangular routing to the output or not
     initialize : bool
         whether to initialize the model by running it once with the whole input data or not
+    
+    Returns
+    -------
+    np.ndarray
+        array of simulated discharge values (mm/day)
     """
 
     prec = to_oneD_array(prec, dtype=np.float32)

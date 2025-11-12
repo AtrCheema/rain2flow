@@ -12,26 +12,48 @@ def hbv(
         evap: np.ndarray, 
         parameters:Dict[str, float], 
         initialize:bool = True,
-        init_days:int = None,
+        # init_days:int = None, todo
         routing:bool = False,
         )->np.ndarray: 
 
     """
-    # Add initialization period to the model input time series
-    if meteo_data['P'].shape[0]<10*365.25:
-        repeats = np.ceil(10*365.25/meteo_data['P'].shape[0])
-        init_period = int(repeats*meteo_data['P'].shape[0])
-        meteo_data['P'] = kron(np.ones((repeats+1, 1)), meteo_data['P'])
-        meteo_data['ETpot'] = kron(np.ones((repeats+1, 1)), meteo_data['ETpot'])
-        meteo_data['Temp'] = kron(np.ones((repeats+1, 1)), meteo_data['Temp'])
-    else:
-        init_period = int(10*365.25)
-        meteo_data['P'] = np.concatenate([meteo_data['P'][:init_period], meteo_data['P']])
-        meteo_data['ETpot'] = np.concatenate([meteo_data['ETpot'][:init_period], meteo_data['ETpot']])
-        meteo_data['Temp'] = np.concatenate([meteo_data['Temp'][:init_period], meteo_data['Temp']])
-    
+    HBV hydrological model implementation in numpy
+
+    Parameters
+    ----------
+    pcp : np.ndarray
+        array of precipitation values (mm/day)
+    temp : np.ndarray
+        array of temperature values (°C)
+    evap : np.ndarray
+        array of potential evapotranspiration values (mm/day)
+    parameters : Dict[str, float]
+        dictionary of model parameters:
+        - 'BETA': Shape coefficient for soil moisture accounting
+        - 'FC': Field capacity of the soil (mm)
+        - 'K0': Recession coefficient for quick runoff component (1/day)
+        - 'K1': Recession coefficient for upper groundwater zone (1/day)
+        - 'K2': Recession coefficient for lower groundwater zone (1/day)
+        - 'LP': Evapotranspiration correction factor
+        - 'MAXBAS': Routing parameter (days)
+        - 'PERC': Percolation rate from upper to lower groundwater zone (mm/day)
+        - 'UZL': Threshold for upper groundwater zone (mm)
+        - 'PCORR': Precipitation correction factor
+        - 'TT': Temperature threshold for snow/rain separation (°C)
+        - 'CFMAX': Degree-day factor for snowmelt (mm/°C/day)
+        - 'SFCF': Snowfall correction factor
+        - 'CFR': Refreezing coefficient
+        - 'CWH': Water holding capacity of snowpack
+    routing : bool
+        whether to apply routing to the simulated runoff or not    
     initialize : bool
         whether to initialize the model by running it once with the whole input data or not
+
+    Returns
+    -------
+    np.ndarray
+        array of simulated discharge values (mm/day)
+    
     """
 
     assert pcp.shape == temp.shape == evap.shape, \
