@@ -29,6 +29,7 @@ def hbv(
         array of potential evapotranspiration values (mm/day)
     parameters : Dict[str, float]
         dictionary of model parameters:
+
         - 'BETA': Shape coefficient for soil moisture accounting
         - 'FC': Field capacity of the soil (mm)
         - 'K0': Recession coefficient for quick runoff component (1/day)

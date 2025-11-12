@@ -21,7 +21,7 @@ rain2flow
    :caption: API
 
 .. autofunction:: rain2flow.hbv
-.. autofunction:: rain2flow._hbv.hbv_nb
+.. autofunction:: rain2flow.hbv_nb
 
 
 .. toctree::

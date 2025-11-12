@@ -3,7 +3,11 @@ __all__ = ['hbv_nb']
 
 from typing import Dict
 
-import numba as nb
+try:
+    import numba as np
+except (ImportError, ModuleNotFoundError):
+    nb = None
+
 import numpy as np
 
 from ..utils import to_oneD_array
@@ -33,6 +37,9 @@ def hbv_nb(
     np.ndarray
         array of simulated discharge values (mm/day)
     """
+
+    if nb is None:
+        raise ImportError("numba is not installed, cannot use hbv_nb function")
 
     prec = to_oneD_array(prec, dtype=np.float32)
     temp = to_oneD_array(temp, dtype=np.float32)
