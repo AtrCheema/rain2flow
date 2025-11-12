@@ -1,3 +1,8 @@
+"""
+====================
+HBV Model Example
+====================
+"""
 
 import os
 import site
