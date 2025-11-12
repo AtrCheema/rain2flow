@@ -1,6 +1,9 @@
 numpy
 pandas
+
+# followign 2 are only for examples
 SeqMetrics
+easy_mpl
 
 sphinx
 sphinx-prompt
