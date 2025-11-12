@@ -18,7 +18,7 @@ from SeqMetrics import RegressionMetrics
 from rain2flow import hbv
 
 # %%
-data = pd.read_csv(os.path.join(package_path, 'examples', 'data.csv'), 
+data = pd.read_csv('data.csv', 
                    comment='#', parse_dates=['date'], index_col='date')
 
 # %%
