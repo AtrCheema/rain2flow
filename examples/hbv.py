@@ -4,18 +4,19 @@ HBV Model Example
 ====================
 """
 
-import os
-import site
-
-package_path = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-print(package_path)
-site.addsitedir(package_path)
+import time
 
 import numpy as np
 import pandas as pd
 from SeqMetrics import RegressionMetrics
 
+import rain2flow
 from rain2flow import hbv
+
+print(time.asctime(), "\n")
+print("np: ", np.__version__)
+print("pd: ", pd.__version__)
+print("rain2flow: ", rain2flow.__version__)
 
 # %%
 data = pd.read_csv('data.csv', 
