@@ -1,7 +1,8 @@
 numpy
-pandas
+numba  # so that documentation can be built even if numba is not installed
 
 # followign 2 are only for examples
+pandas
 SeqMetrics
 easy_mpl
 
