@@ -19,10 +19,14 @@ print("pd: ", pd.__version__)
 print("rain2flow: ", rain2flow.__version__)
 
 # %%
+# Read the data from disk which contains `pcp`, `temp` and `pet` columns.
+
 data = pd.read_csv('data.csv', 
                    comment='#', parse_dates=['date'], index_col='date')
 
 # %%
+# specify the model parameters.
+
 parameters = {
     "BETA": 2.254272145204868,
     "CFMAX": 2.634558463081481,
@@ -41,6 +45,7 @@ parameters = {
     "UZL": 36.983252412038695
 }
 
+# run the model
 sim = hbv(
     data['pcp'].values,
     data['temp'].values,
@@ -48,6 +53,7 @@ sim = hbv(
     parameters=parameters)
 
 # %%
+# evaluate the model performance using KGE, NSE and PBIAS metrics.
 
 metrics = RegressionMetrics(data['Qobs'].values, sim.flatten())
 
